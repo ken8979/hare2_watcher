@@ -11,7 +11,9 @@
     "test:simulate": "node tests/simulate.js",
     "test:simulate-multi": "node tests/simulate-multi.js",
     "test:email": "node tests/test-email.js",
-    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email\" && exit 0"
+    "test:email-price-change": "node tests/test-email-price-change.js",
+    "test:email-batch-mock": "node tests/test-email-batch-mock.js",
+    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock\" && exit 0"
   },
   "keywords": [],
   "author": "",

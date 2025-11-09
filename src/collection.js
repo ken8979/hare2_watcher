@@ -2,10 +2,21 @@ import { load } from 'cheerio';
 import crypto from 'node:crypto';
 import { buildCollectionUrl, config } from './config.js';
 import { getCollectionHash, setCollectionHash } from './redis.js';
+import { extractHashNumber } from './product.js';
 
 function shortHash(text) {
   return crypto.createHash('sha1').update(text).digest('hex').slice(0, 12);
 }
+
+// 価格文字列をパース（例: "¥10,000" → 10000）
+function parsePriceYen(priceText) {
+  if (!priceText) return null;
+  // 数字とカンマのみを抽出
+  const cleaned = priceText.replace(/[^\d,]/g, '').replace(/,/g, '');
+  const num = Number(cleaned);
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
 
 export async function fetchCollectionPage(collectionBase, page) {
   // 後方互換性: collectionBaseが未指定の場合は既存の設定を使用
@@ -19,27 +30,122 @@ export async function fetchCollectionPage(collectionBase, page) {
   const changed = last !== hash;
   if (changed) await setCollectionHash(url, hash);
   const $ = load(html);
+  
+  // 商品情報を一覧ページから直接抽出
+  const products = [];
   const productLinks = new Set();
-  $('a[href^="/products/"]').each((_, el) => {
-    const href = $(el).attr('href');
-    if (!href) return;
-    // 正規化（クエリ/フラグメントは不要）
-    try {
-      const u = new URL(href, base);
-      u.search = '';
-      u.hash = '';
-      productLinks.add(u.toString());
-    } catch {
-      // ignore
-    }
-  });
-  return { url, changed, links: Array.from(productLinks) };
+  
+  // 商品カード/アイテムを探す（一般的なShopifyのセレクタ）
+  // 複数のパターンを試す
+  const productSelectors = [
+    '.product-item',
+    '.product-card',
+    '[class*="product"]',
+    'article[class*="product"]',
+    'div[class*="product"]',
+  ];
+  
+  let productElements = [];
+  for (const selector of productSelectors) {
+    productElements = $(selector);
+    if (productElements.length > 0) break;
+  }
+  
+  // 商品が見つからない場合は、商品リンクから推測
+  if (productElements.length === 0) {
+    $('a[href^="/products/"]').each((_, el) => {
+      const $link = $(el);
+      const href = $link.attr('href');
+      if (!href) return;
+      
+      try {
+        const u = new URL(href, base);
+        u.search = '';
+        u.hash = '';
+        const productUrl = u.toString();
+        productLinks.add(productUrl);
+        
+        // リンク周辺から商品情報を抽出
+        const $card = $link.closest('div, article, li');
+        const title = $link.text().trim() || $link.attr('title') || $card.find('h2, h3, .title, [class*="title"]').first().text().trim();
+        const priceText = $card.find('.price, [class*="price"], .money').first().text().trim();
+        const priceYen = parsePriceYen(priceText);
+        
+        // 在庫情報（「在庫あり」「売り切れ」など）
+        const stockText = $card.text().toLowerCase();
+        const inStock = !stockText.includes('売り切れ') && !stockText.includes('sold out') && !stockText.includes('out of stock');
+        const totalStock = inStock ? 1 : 0; // 精度を無視するため、在庫あり=1、売り切れ=0
+        
+        if (title) {
+          const handle = href.split('/products/')[1]?.split('/')[0] || '';
+          products.push({
+            productId: handle,
+            handle: handle,
+            title: title,
+            url: productUrl,
+            totalStock: totalStock,
+            priceYen: priceYen || 0,
+            hashNumber: extractHashNumber(title),
+          });
+        }
+      } catch {
+        // ignore
+      }
+    });
+  } else {
+    // 商品カードから情報を抽出
+    productElements.each((_, el) => {
+      const $card = $(el);
+      const $link = $card.find('a[href^="/products/"]').first();
+      const href = $link.attr('href');
+      if (!href) return;
+      
+      try {
+        const u = new URL(href, base);
+        u.search = '';
+        u.hash = '';
+        const productUrl = u.toString();
+        productLinks.add(productUrl);
+        
+        const title = $link.text().trim() || $link.attr('title') || $card.find('h2, h3, .title, [class*="title"]').first().text().trim();
+        const priceText = $card.find('.price, [class*="price"], .money').first().text().trim();
+        const priceYen = parsePriceYen(priceText);
+        
+        // 在庫情報
+        const stockText = $card.text().toLowerCase();
+        const inStock = !stockText.includes('売り切れ') && !stockText.includes('sold out') && !stockText.includes('out of stock');
+        const totalStock = inStock ? 1 : 0;
+        
+        if (title) {
+          const handle = href.split('/products/')[1]?.split('/')[0] || '';
+          products.push({
+            productId: handle,
+            handle: handle,
+            title: title,
+            url: productUrl,
+            totalStock: totalStock,
+            priceYen: priceYen || 0,
+            hashNumber: extractHashNumber(title),
+          });
+        }
+      } catch {
+        // ignore
+      }
+    });
+  }
+  
+  return { 
+    url, 
+    changed, 
+    links: Array.from(productLinks),
+    products: products, // 一覧ページから抽出した商品情報
+  };
 }
 
 // ページネーションから最大ページ数を検出
 export async function detectMaxPage(collectionBase) {
   try {
-    const { url, changed } = await fetchCollectionPage(collectionBase, 1);
+    const url = buildCollectionUrl(collectionBase, 1);
     const res = await fetch(url, { headers: { 'User-Agent': 'hareruya2bot/1.0' }});
     if (!res.ok) return null;
     const html = await res.text();

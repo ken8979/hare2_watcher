@@ -83,9 +83,8 @@ async function main() {
       eventType = 'NewHighPricePage';
       notify = true;
     } else if (prevPrice !== null && prevPrice !== p.priceYen) {
-      // 価格変動
-      eventType = 'PriceChanged';
-      notify = true;
+      // 価格変動（通知しない - 在庫変更のみ通知）
+      // notify = false; // 価格変更は通知しない
     } else if (p.totalStock > prevStock) {
       // 在庫増加
       eventType = 'StockIncreased';

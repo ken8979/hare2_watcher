@@ -52,9 +52,8 @@ async function handleProduct(product, collectionName) {
     notify = true;
     eventType = 'NewHighPricePage';
   } else if (prevPrice !== null && prevPrice !== product.priceYen) {
-    // 価格変動
-    notify = true;
-    eventType = 'PriceChanged';
+    // 価格変動（通知しない - 在庫変更のみ通知）
+    // notify = false; // 価格変更は通知しない
   } else if (prevStock === 0 && product.totalStock > 0) {
     // 再入荷（在庫0→1以上）
     notify = true;
@@ -105,17 +104,34 @@ async function handleProduct(product, collectionName) {
       await sendSlack(message);
       
       // メール通知をキューに追加（バッチ送信用）
-      if (config.emailEnabled && collectionName) {
-        if (!emailNotificationQueue.has(collectionName)) {
-          emailNotificationQueue.set(collectionName, []);
+      if (config.emailEnabled) {
+        // collectionNameが未指定の場合は、URLから推測を試みる
+        let queueKey = collectionName;
+        if (!queueKey && product.url) {
+          // URLからコレクション名を推測（例: /collections/pmcg/ から pmcg）
+          const urlMatch = product.url.match(/\/collections\/([^\/]+)/);
+          if (urlMatch) {
+            queueKey = urlMatch[1].toUpperCase();
+          } else {
+            queueKey = 'UNKNOWN';
+          }
         }
-        emailNotificationQueue.get(collectionName).push({
-          eventType,
-          message,
-          product,
-          timestamp: new Date().toISOString(),
-        });
-        console.log(`[watch] メール通知をキューに追加: ${collectionName} (キューサイズ: ${emailNotificationQueue.get(collectionName).length})`);
+        
+        if (queueKey) {
+          if (!emailNotificationQueue.has(queueKey)) {
+            emailNotificationQueue.set(queueKey, []);
+          }
+          emailNotificationQueue.get(queueKey).push({
+            eventType,
+            message,
+            product,
+            timestamp: new Date().toISOString(),
+          });
+          const queueSize = emailNotificationQueue.get(queueKey).length;
+          console.log(`[watch] メール通知をキューに追加: ${queueKey} (キューサイズ: ${queueSize})`);
+        } else {
+          console.warn('[watch] メール通知キューに追加失敗: collectionNameが不明');
+        }
       }
     }
   }
@@ -131,31 +147,24 @@ async function handleProduct(product, collectionName) {
 }
 
 async function processPage(collectionBase, page, isHotPage = false, collectionName = null) {
-  const { changed, links, url } = await fetchCollectionPage(collectionBase, page);
-  // バグ修正: page1は常に商品JSON取得（ハッシュ変化に関係なく）
+  const { changed, products, url } = await fetchCollectionPage(collectionBase, page);
+  // バグ修正: page1は常に商品情報を処理（ハッシュ変化に関係なく）
   if (!changed && !isHotPage) {
     return; // page1以外で変化がない場合はスキップ
   }
   
-  // 対象商品のJSONを並列取得
-  const concurrency = 4;
-  const queue = [...links];
-  const workers = Array.from({ length: concurrency }, async () => {
-    while (queue.length) {
-      const productUrl = queue.shift();
-      try {
-        const p = await fetchProductJsonByUrl(productUrl);
-        if (isTargetProduct(p)) {
-          await handleProduct(p, collectionName);
-        }
-      } catch (e) {
-        console.warn('[product]', productUrl, e.message);
+  // 一覧ページから取得した商品情報を処理
+  console.log(`[watch] ${collectionName || 'unknown'} page${page}: ${products.length}件の商品を処理`);
+  
+  for (const product of products) {
+    try {
+      if (isTargetProduct(product)) {
+        await handleProduct(product, collectionName);
       }
-      // レートを守る
-      await sleep(jitteredDelay(1000 / Math.max(config.rpsBudget, 0.1)));
+    } catch (e) {
+      console.warn('[product]', product.url, e.message);
     }
-  });
-  await Promise.all(workers);
+  }
 }
 
 // 優先度に応じた間隔を取得
@@ -183,14 +192,21 @@ async function processEmailBatch() {
     return;
   }
 
+  let totalSent = 0;
   for (const [collectionName, notifications] of emailNotificationQueue.entries()) {
     if (notifications.length > 0) {
       // キューから通知を取得して送信
       const batch = [...notifications];
       emailNotificationQueue.set(collectionName, []); // キューをクリア
       
+      console.log(`[email] バッチメール送信開始: ${collectionName} (${batch.length}件)`);
       await sendBatchEmail(collectionName, batch);
+      totalSent += batch.length;
     }
+  }
+  
+  if (totalSent > 0) {
+    console.log(`[email] バッチメール送信完了: 合計${totalSent}件`);
   }
 }
 
@@ -230,13 +246,8 @@ async function mainLoop() {
   while (true) {
     const now = Date.now();
     
-    // バッチメール送信処理（一定間隔ごと）
-    if (config.emailEnabled && (now - lastEmailBatchTime) >= (config.emailBatchIntervalSec * 1000)) {
-      await processEmailBatch();
-      lastEmailBatchTime = now;
-    }
-    
     // 各コレクションを処理
+    let anyCollectionProcessed = false;
     for (const collection of resolvedCollections) {
       const collectionKey = collection.name;
       const lastRun = lastRunTimes.get(collectionKey) || 0;
@@ -257,6 +268,21 @@ async function mainLoop() {
         
         lastRunTimes.set(collectionKey, now);
         console.log(`[watch] 処理完了: ${collection.name}`);
+        anyCollectionProcessed = true;
+      }
+    }
+    
+    // コレクション処理後にバッチメール送信をチェック
+    // または一定間隔が経過した場合
+    if (config.emailEnabled && (
+      anyCollectionProcessed || 
+      (now - lastEmailBatchTime) >= (config.emailBatchIntervalSec * 1000)
+    )) {
+      const queueSize = Array.from(emailNotificationQueue.values()).reduce((sum, arr) => sum + arr.length, 0);
+      if (queueSize > 0) {
+        console.log(`[email] バッチメール送信タイミング: キューサイズ=${queueSize}`);
+        await processEmailBatch();
+        lastEmailBatchTime = now;
       }
     }
     
