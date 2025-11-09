@@ -57,6 +57,18 @@ COLLECTIONS=[{"name":"PMCG","base":"https://www.hareruya2.com/collections/pmcg?f
   - `"normal"`: 中頻度（WARM_INTERVAL_SEC間隔）
   - `"cold"`: 低頻度（COLD_INTERVAL_SEC間隔）
 
+**大量のコレクションを追加する場合:**
+
+`collections-config.json`ファイルを編集して、スクリプトで環境変数を生成:
+
+```bash
+# 1. collections-config.jsonを編集
+# 2. 環境変数を生成して.envに追加
+node scripts/generate-collections-env.js >> .env
+```
+
+詳細は`scripts/README.md`を参照してください。
+
 #### 方法2: 単一コレクション（後方互換性）
 
 既存の設定方法も使用可能:

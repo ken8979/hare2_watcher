@@ -1,0 +1,99 @@
+[
+  {
+    "name": "MEGA",
+    "base": "https://www.hareruya2.com/collections/mega?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "SV",
+    "base": "https://www.hareruya2.com/collections/sv?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "SS",
+    "base": "https://www.hareruya2.com/collections/ss?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "SM",
+    "base": "https://www.hareruya2.com/collections/sm?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "XY",
+    "base": "https://www.hareruya2.com/collections/xy?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "BW",
+    "base": "https://www.hareruya2.com/collections/bw?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "LEGEND",
+    "base": "https://www.hareruya2.com/collections/l?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "DPt",
+    "base": "https://www.hareruya2.com/collections/dpt?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "DP",
+    "base": "https://www.hareruya2.com/collections/dp?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "PCG",
+    "base": "https://www.hareruya2.com/collections/pcg?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "ADV",
+    "base": "https://www.hareruya2.com/collections/adv?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "e",
+    "base": "https://www.hareruya2.com/collections/e?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "neo",
+    "base": "https://www.hareruya2.com/collections/neo?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "web",
+    "base": "https://www.hareruya2.com/collections/47?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "VS",
+    "base": "https://www.hareruya2.com/collections/45?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "normal"
+  },
+  {
+    "name": "PMCG",
+    "base": "https://www.hareruya2.com/collections/pmcg?filter.v.availability=1&sort_by=price-descending",
+    "pages": "all",
+    "priority": "hot"
+  }
+]
+
