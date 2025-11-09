@@ -127,7 +127,11 @@ async function handleProduct(product, collectionName) {
       
       msgParts.push(cleanTitle);
       msgParts.push(product.url);
-      msgParts.push(prevStock !== null ? `前回在庫: ${prevStock}` : '前回在庫: N/A');
+      if (prevStock !== null) {
+        msgParts.push(`在庫: ${prevStock} → ${product.totalStock}`);
+      } else {
+        msgParts.push(`在庫: N/A → ${product.totalStock}`);
+      }
       
       // 価格変更の情報は追加しない（価格変更通知自体が無効化されているため、この部分は実行されないが念のため）
       // if (prevPrice !== null && prevPrice !== product.priceYen) {

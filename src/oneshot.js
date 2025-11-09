@@ -120,9 +120,9 @@ async function main() {
         msgParts.push(p.url);
         
         if (prevStock !== null) {
-          msgParts.push(`前回在庫: ${prevStock}`);
+          msgParts.push(`在庫: ${prevStock} → ${p.totalStock}`);
         } else {
-          msgParts.push('前回在庫: N/A');
+          msgParts.push(`在庫: N/A → ${p.totalStock}`);
         }
         
         // 価格変更の情報は追加しない
