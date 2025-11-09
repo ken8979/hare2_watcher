@@ -110,6 +110,8 @@ export const config = {
   // 在庫減少・売り切れ通知設定
   notifyStockDecrease: str('NOTIFY_STOCK_DECREASE', 'false') === 'true',
   notifySoldOut: str('NOTIFY_SOLD_OUT', 'false') === 'true',
+  // バッチメール送信設定
+  emailBatchIntervalSec: num('EMAIL_BATCH_INTERVAL_SEC', 60), // バッチメール送信間隔（秒）
 };
 
 export function buildCollectionUrl(base, page) {

@@ -3,7 +3,7 @@ import { fetchCollectionPage, detectMaxPage } from './collection.js';
 import { fetchProductJsonByUrl, isTargetProduct } from './product.js';
 import { dedupeCheckAndSet, getProductState, setProductState } from './redis.js';
 import { sendSlack } from './slack.js';
-import { sendEmail } from './email.js';
+import { sendEmail, sendBatchEmail } from './email.js';
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -17,7 +17,10 @@ function eventId(product, eventType) {
   return `${eventType}::${identity}::${product.totalStock}`;
 }
 
-async function handleProduct(product) {
+// メール通知キュー（コレクション名をキーとして管理）
+const emailNotificationQueue = new Map();
+
+async function handleProduct(product, collectionName) {
   // 新規高額カードページ検知: #数字4桁を含む商品は、hashNumberをidentityに含める
   const hashNumber = product.hashNumber;
   let identity = product.handle || product.productId || product.url;
@@ -101,13 +104,18 @@ async function handleProduct(product) {
       const message = msgParts.join('\n');
       await sendSlack(message);
       
-      // メール通知も送信（設定で有効/無効を切り替え可能）
-      if (config.emailEnabled) {
-        try {
-          await sendEmail(`【${eventType}】${product.title}`, message);
-        } catch (err) {
-          console.warn('[watch] メール送信失敗:', err.message);
+      // メール通知をキューに追加（バッチ送信用）
+      if (config.emailEnabled && collectionName) {
+        if (!emailNotificationQueue.has(collectionName)) {
+          emailNotificationQueue.set(collectionName, []);
         }
+        emailNotificationQueue.get(collectionName).push({
+          eventType,
+          message,
+          product,
+          timestamp: new Date().toISOString(),
+        });
+        console.log(`[watch] メール通知をキューに追加: ${collectionName} (キューサイズ: ${emailNotificationQueue.get(collectionName).length})`);
       }
     }
   }
@@ -122,7 +130,7 @@ async function handleProduct(product) {
   });
 }
 
-async function processPage(collectionBase, page, isHotPage = false) {
+async function processPage(collectionBase, page, isHotPage = false, collectionName = null) {
   const { changed, links, url } = await fetchCollectionPage(collectionBase, page);
   // バグ修正: page1は常に商品JSON取得（ハッシュ変化に関係なく）
   if (!changed && !isHotPage) {
@@ -138,7 +146,7 @@ async function processPage(collectionBase, page, isHotPage = false) {
       try {
         const p = await fetchProductJsonByUrl(productUrl);
         if (isTargetProduct(p)) {
-          await handleProduct(p);
+          await handleProduct(p, collectionName);
         }
       } catch (e) {
         console.warn('[product]', productUrl, e.message);
@@ -167,6 +175,23 @@ function getIntervalForPriority(priority) {
 // ページがホットページかどうか判定（page1-3はホット）
 function isHotPage(pageNum) {
   return pageNum <= 3;
+}
+
+// バッチメール送信処理
+async function processEmailBatch() {
+  if (!config.emailEnabled) {
+    return;
+  }
+
+  for (const [collectionName, notifications] of emailNotificationQueue.entries()) {
+    if (notifications.length > 0) {
+      // キューから通知を取得して送信
+      const batch = [...notifications];
+      emailNotificationQueue.set(collectionName, []); // キューをクリア
+      
+      await sendBatchEmail(collectionName, batch);
+    }
+  }
 }
 
 async function mainLoop() {
@@ -199,8 +224,17 @@ async function mainLoop() {
   // コレクションごとの最終実行時刻を管理
   const lastRunTimes = new Map();
   
+  // バッチメール送信の最終実行時刻を管理
+  let lastEmailBatchTime = Date.now();
+  
   while (true) {
     const now = Date.now();
+    
+    // バッチメール送信処理（一定間隔ごと）
+    if (config.emailEnabled && (now - lastEmailBatchTime) >= (config.emailBatchIntervalSec * 1000)) {
+      await processEmailBatch();
+      lastEmailBatchTime = now;
+    }
     
     // 各コレクションを処理
     for (const collection of resolvedCollections) {
@@ -215,7 +249,7 @@ async function mainLoop() {
         for (const page of collection.pages) {
           try {
             const isHot = isHotPage(page);
-            await processPage(collection.base, page, isHot);
+            await processPage(collection.base, page, isHot, collection.name);
           } catch (e) {
             console.warn(`[watch] ${collection.name} page${page} エラー:`, e.message);
           }

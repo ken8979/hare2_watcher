@@ -44,3 +44,36 @@ export async function sendEmail(subject, message) {
   }
 }
 
+// バッチメール送信（複数の通知をまとめて送信）
+export async function sendBatchEmail(collectionName, notifications) {
+  if (!config.emailEnabled || !config.emailTo || !notifications || notifications.length === 0) {
+    return;
+  }
+
+  const subject = `【${collectionName}】在庫・価格変動通知 (${notifications.length}件)`;
+  
+  const lines = [
+    `【${collectionName}】の在庫・価格変動通知`,
+    `変動件数: ${notifications.length}件`,
+    '',
+    '='.repeat(50),
+    '',
+  ];
+
+  for (const notif of notifications) {
+    lines.push(notif.message);
+    lines.push('');
+    lines.push('-'.repeat(50));
+    lines.push('');
+  }
+
+  const message = lines.join('\n');
+
+  try {
+    await sendEmail(subject, message);
+    console.log(`[email] バッチメール送信成功: ${collectionName} (${notifications.length}件)`);
+  } catch (error) {
+    console.error(`[email] バッチメール送信失敗: ${collectionName}`, error.message);
+  }
+}
+
