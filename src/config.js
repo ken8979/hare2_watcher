@@ -91,9 +91,9 @@ export const config = {
   pages: (str('PAGES', '1,2,3').split(',').map(s => Number(s.trim())).filter(n => Number.isFinite(n))),
   priceThresholdYen: num('PRICE_THRESHOLD_YEN', 10000),
   rpsBudget: num('RPS_BUDGET', 0.8),
-  hotIntervalSec: num('HOT_INTERVAL_SEC', 20),
-  warmIntervalSec: num('WARM_INTERVAL_SEC', 60),
-  coldIntervalSec: num('COLD_INTERVAL_SEC', 300),
+  hotIntervalSec: num('HOT_INTERVAL_SEC', 60),      // 1分間隔に統一
+  warmIntervalSec: num('WARM_INTERVAL_SEC', 60),    // 1分間隔に統一
+  coldIntervalSec: num('COLD_INTERVAL_SEC', 60),    // 1分間隔に統一
   jitterMsMin: num('JITTER_MS_MIN', 200),
   jitterMsMax: num('JITTER_MS_MAX', 1200),
   dedupeCooldownSec: num('DEDUPE_COOLDOWN_SEC', 180),
