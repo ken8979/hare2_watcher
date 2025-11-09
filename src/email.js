@@ -61,13 +61,23 @@ export async function sendBatchEmail(collectionName, notifications) {
   ];
 
   for (const notif of notifications) {
-    lines.push(notif.message);
+    // メッセージから余分な空白行を削除
+    const cleanMessage = notif.message
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0) // 空行を削除
+      .join('\n');
+    lines.push(cleanMessage);
     lines.push('');
     lines.push('-'.repeat(50));
     lines.push('');
   }
 
-  const message = lines.join('\n');
+  // 最終的なメッセージから連続する空行を削除
+  const message = lines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n') // 3つ以上の連続する改行を2つに
+    .trim();
 
   try {
     await sendEmail(subject, message);

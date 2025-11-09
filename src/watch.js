@@ -87,9 +87,11 @@ async function handleProduct(product, collectionName) {
     const first = await dedupeCheckAndSet(eid, config.dedupeCooldownSec);
     if (first) {
       console.log(`[watch] 通知送信: ${eventType} ${identity} 在庫${prevStock ?? 'N/A'}→${product.totalStock}`);
+      // 商品名から余分なスペースや改行を削除
+      const cleanTitle = (product.title || '').replace(/\s+/g, ' ').trim();
       const msgParts = [
         `【${eventType}】¥${product.priceYen.toLocaleString()} 在庫${product.totalStock}`,
-        product.title,
+        cleanTitle,
         product.url,
         prevStock !== null ? `前回在庫: ${prevStock}` : '前回在庫: N/A',
       ];

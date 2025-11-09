@@ -17,6 +17,16 @@ function parsePriceYen(priceText) {
   return Number.isFinite(num) && num > 0 ? num : null;
 }
 
+// テキストから余分なスペースや改行を削除
+function cleanText(text) {
+  if (!text) return '';
+  return text
+    .replace(/\s+/g, ' ')  // 連続する空白を1つに
+    .replace(/\n+/g, ' ')  // 改行をスペースに
+    .replace(/\r+/g, ' ')  // キャリッジリターンをスペースに
+    .trim();                // 前後の空白を削除
+}
+
 
 export async function fetchCollectionPage(collectionBase, page) {
   // 後方互換性: collectionBaseが未指定の場合は既存の設定を使用
@@ -67,7 +77,8 @@ export async function fetchCollectionPage(collectionBase, page) {
         
         // リンク周辺から商品情報を抽出
         const $card = $link.closest('div, article, li');
-        const title = $link.text().trim() || $link.attr('title') || $card.find('h2, h3, .title, [class*="title"]').first().text().trim();
+        const rawTitle = $link.text().trim() || $link.attr('title') || $card.find('h2, h3, .title, [class*="title"]').first().text().trim();
+        const title = cleanText(rawTitle);
         const priceText = $card.find('.price, [class*="price"], .money').first().text().trim();
         const priceYen = parsePriceYen(priceText);
         
@@ -107,7 +118,8 @@ export async function fetchCollectionPage(collectionBase, page) {
         const productUrl = u.toString();
         productLinks.add(productUrl);
         
-        const title = $link.text().trim() || $link.attr('title') || $card.find('h2, h3, .title, [class*="title"]').first().text().trim();
+        const rawTitle = $link.text().trim() || $link.attr('title') || $card.find('h2, h3, .title, [class*="title"]').first().text().trim();
+        const title = cleanText(rawTitle);
         const priceText = $card.find('.price, [class*="price"], .money').first().text().trim();
         const priceYen = parsePriceYen(priceText);
         
