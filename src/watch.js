@@ -23,10 +23,34 @@ const emailNotificationQueue = new Map();
 async function handleProduct(product, collectionName) {
   // 新規高額カードページ検知: #数字4桁を含む商品は、hashNumberをidentityに含める
   const hashNumber = product.hashNumber;
-  let identity = product.handle || product.productId || product.url;
+  
+  // identityを生成（handle > productId > URLから抽出）
+  let identity = product.handle || product.productId;
+  
+  // handle/productIdが取得できない場合は、URLから抽出
+  if (!identity && product.url) {
+    try {
+      const urlObj = new URL(product.url);
+      const pathParts = urlObj.pathname.split('/').filter(Boolean);
+      if (pathParts.length >= 2 && pathParts[0] === 'products') {
+        identity = pathParts[1]; // /products/handle から handle を取得
+      } else {
+        identity = product.url; // フォールバック
+      }
+    } catch {
+      identity = product.url; // フォールバック
+    }
+  }
+  
   if (hashNumber) {
     // 同じカードの別ページ（#1384 vs #1415）を区別するため、hashNumberを含める
-    identity = `${product.handle || product.productId}::#${hashNumber}`;
+    identity = `${identity}::#${hashNumber}`;
+  }
+  
+  // identityが空の場合はスキップ
+  if (!identity) {
+    console.warn(`[watch] identityが空のためスキップ: ${product.title}`);
+    return;
   }
   
   const prev = await getProductState(identity);
@@ -41,11 +65,16 @@ async function handleProduct(product, collectionName) {
   let eventType = 'HighPriceInStock';
   
   if (prevStock === null) {
-    // 初回検知
-    notify = true;
+    // 初回検知（初回検知は通知しない - 在庫変動のみ通知）
+    // 初回検知の商品は状態を保存するだけで、通知はしない
+    // これにより、毎回初回検知として通知されることを防ぐ
+    notify = false;
+    eventType = 'HighPriceInStock';
     // 新規高額カードページ検知: タイトルに#数字4桁がある場合は特別なイベントタイプ
     if (hashNumber) {
       eventType = 'NewHighPricePage';
+      // NewHighPricePageの場合は通知する
+      notify = true;
     }
   } else if (hashNumber && prevHashNumber !== hashNumber) {
     // 新規高額カードページ検知: #数字4桁が変わった場合
@@ -89,18 +118,23 @@ async function handleProduct(product, collectionName) {
       console.log(`[watch] 通知送信: ${eventType} ${identity} 在庫${prevStock ?? 'N/A'}→${product.totalStock}`);
       // 商品名から余分なスペースや改行を削除
       const cleanTitle = (product.title || '').replace(/\s+/g, ' ').trim();
-      const msgParts = [
-        `【${eventType}】¥${product.priceYen.toLocaleString()} 在庫${product.totalStock}`,
-        cleanTitle,
-        product.url,
-        prevStock !== null ? `前回在庫: ${prevStock}` : '前回在庫: N/A',
-      ];
+      const msgParts = [];
       
-      if (prevPrice !== null && prevPrice !== product.priceYen) {
-        const priceDelta = product.priceYen - prevPrice;
-        const deltaStr = priceDelta > 0 ? `+¥${priceDelta.toLocaleString()}` : `¥${priceDelta.toLocaleString()}`;
-        msgParts.push(`前回価格: ¥${prevPrice.toLocaleString()} → ${deltaStr}`);
+      // 【HighPriceInStock】の行は追加しない
+      if (eventType !== 'HighPriceInStock') {
+        msgParts.push(`【${eventType}】¥${product.priceYen.toLocaleString()} 在庫${product.totalStock}`);
       }
+      
+      msgParts.push(cleanTitle);
+      msgParts.push(product.url);
+      msgParts.push(prevStock !== null ? `前回在庫: ${prevStock}` : '前回在庫: N/A');
+      
+      // 価格変更の情報は追加しない（価格変更通知自体が無効化されているため、この部分は実行されないが念のため）
+      // if (prevPrice !== null && prevPrice !== product.priceYen) {
+      //   const priceDelta = product.priceYen - prevPrice;
+      //   const deltaStr = priceDelta > 0 ? `+¥${priceDelta.toLocaleString()}` : `¥${priceDelta.toLocaleString()}`;
+      //   msgParts.push(`前回価格: ¥${prevPrice.toLocaleString()} → ${deltaStr}`);
+      // }
       
       const message = msgParts.join('\n');
       await sendSlack(message);
@@ -138,14 +172,24 @@ async function handleProduct(product, collectionName) {
     }
   }
 
-  await setProductState(identity, {
-    lastTotalStock: product.totalStock,
-    lastEventType: notify ? eventType : (prev?.lastEventType ?? ''),
-    lastEventAt: notify ? now : (prev?.lastEventAt ?? ''),
-    firstSeenAt: prev?.firstSeenAt ?? now,
-    lastPriceYen: product.priceYen,
-    lastHashNumber: hashNumber || '',
-  });
+  // 状態を保存（通知の有無に関わらず、常に保存）
+  // これにより、次回のチェック時に正しい前回状態が取得できる
+  try {
+    await setProductState(identity, {
+      lastTotalStock: product.totalStock,
+      lastEventType: notify ? eventType : (prev?.lastEventType ?? ''),
+      lastEventAt: notify ? now : (prev?.lastEventAt ?? ''),
+      firstSeenAt: prev?.firstSeenAt ?? now,
+      lastPriceYen: product.priceYen,
+      lastHashNumber: hashNumber || '',
+    });
+    if (prevStock === null) {
+      console.log(`[watch] 初回検知: ${identity} 在庫${product.totalStock} - 状態を保存（通知なし）`);
+    }
+  } catch (error) {
+    console.error(`[watch] Redis状態保存失敗: ${identity}`, error.message);
+    // エラーが発生しても処理を続行（通知は送信されるが、次回の重複防止に影響）
+  }
 }
 
 async function processPage(collectionBase, page, isHotPage = false, collectionName = null) {

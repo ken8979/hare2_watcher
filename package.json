@@ -13,7 +13,12 @@
     "test:email": "node tests/test-email.js",
     "test:email-price-change": "node tests/test-email-price-change.js",
     "test:email-batch-mock": "node tests/test-email-batch-mock.js",
-    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock\" && exit 0"
+    "test:e2e-email": "node tests/test-e2e-email.js",
+    "test:redis-state": "node tests/test-redis-state.js",
+    "test:first-detection": "node tests/test-first-detection.js",
+    "test:first-detection-clear": "node tests/test-first-detection-clear.js",
+    "test:normal-product-first-detection": "node tests/test-normal-product-first-detection.js",
+    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock, test:e2e-email, test:redis-state, test:first-detection, test:first-detection-clear, test:normal-product-first-detection\" && exit 0"
   },
   "keywords": [],
   "author": "",

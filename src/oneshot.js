@@ -109,11 +109,15 @@ async function main() {
       
       if (isNew) {
         // Slackと同じフォーマットで通知メッセージを作成
-        const msgParts = [
-          `【${eventType}】¥${p.priceYen.toLocaleString()} 在庫${p.totalStock}`,
-          p.title,
-          p.url,
-        ];
+        const msgParts = [];
+        
+        // 【HighPriceInStock】の行は追加しない
+        if (eventType !== 'HighPriceInStock') {
+          msgParts.push(`【${eventType}】¥${p.priceYen.toLocaleString()} 在庫${p.totalStock}`);
+        }
+        
+        msgParts.push(p.title);
+        msgParts.push(p.url);
         
         if (prevStock !== null) {
           msgParts.push(`前回在庫: ${prevStock}`);
@@ -121,11 +125,12 @@ async function main() {
           msgParts.push('前回在庫: N/A');
         }
         
-        if (prevPrice !== null && prevPrice !== p.priceYen) {
-          const priceDelta = p.priceYen - prevPrice;
-          const deltaStr = priceDelta > 0 ? `+¥${priceDelta.toLocaleString()}` : `¥${priceDelta.toLocaleString()}`;
-          msgParts.push(`前回価格: ¥${prevPrice.toLocaleString()} → ${deltaStr}`);
-        }
+        // 価格変更の情報は追加しない
+        // if (prevPrice !== null && prevPrice !== p.priceYen) {
+        //   const priceDelta = p.priceYen - prevPrice;
+        //   const deltaStr = priceDelta > 0 ? `+¥${priceDelta.toLocaleString()}` : `¥${priceDelta.toLocaleString()}`;
+        //   msgParts.push(`前回価格: ¥${prevPrice.toLocaleString()} → ${deltaStr}`);
+        // }
         
         const message = msgParts.join('\n');
         notifications.push({

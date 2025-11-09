@@ -88,7 +88,22 @@ export async function fetchCollectionPage(collectionBase, page) {
         const totalStock = inStock ? 1 : 0; // 精度を無視するため、在庫あり=1、売り切れ=0
         
         if (title) {
-          const handle = href.split('/products/')[1]?.split('/')[0] || '';
+          // handleを抽出（クエリパラメータを除去）
+          let handle = href.split('/products/')[1]?.split('/')[0] || '';
+          // クエリパラメータ（?以降）を除去
+          if (handle.includes('?')) {
+            handle = handle.split('?')[0];
+          }
+          // URLから直接handleを抽出（より確実な方法）
+          try {
+            const urlObj = new URL(href, base);
+            const pathParts = urlObj.pathname.split('/').filter(Boolean);
+            if (pathParts.length >= 2 && pathParts[0] === 'products') {
+              handle = pathParts[1]; // /products/handle から handle を取得
+            }
+          } catch {
+            // URL解析に失敗した場合は、既存のhandleを使用
+          }
           products.push({
             productId: handle,
             handle: handle,
@@ -129,7 +144,22 @@ export async function fetchCollectionPage(collectionBase, page) {
         const totalStock = inStock ? 1 : 0;
         
         if (title) {
-          const handle = href.split('/products/')[1]?.split('/')[0] || '';
+          // handleを抽出（クエリパラメータを除去）
+          let handle = href.split('/products/')[1]?.split('/')[0] || '';
+          // クエリパラメータ（?以降）を除去
+          if (handle.includes('?')) {
+            handle = handle.split('?')[0];
+          }
+          // URLから直接handleを抽出（より確実な方法）
+          try {
+            const urlObj = new URL(href, base);
+            const pathParts = urlObj.pathname.split('/').filter(Boolean);
+            if (pathParts.length >= 2 && pathParts[0] === 'products') {
+              handle = pathParts[1]; // /products/handle から handle を取得
+            }
+          } catch {
+            // URL解析に失敗した場合は、既存のhandleを使用
+          }
           products.push({
             productId: handle,
             handle: handle,

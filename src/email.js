@@ -56,24 +56,29 @@ export async function sendBatchEmail(collectionName, notifications) {
     `【${collectionName}】の在庫・価格変動通知`,
     `変動件数: ${notifications.length}件`,
     '',
-    '='.repeat(50),
-    '',
   ];
 
   for (const notif of notifications) {
-    // メッセージから余分な空白行を削除
-    const cleanMessage = notif.message
+    // メッセージから余分な空白行を削除し、最初の行（【イベントタイプ】価格 在庫）を削除
+    const messageLines = notif.message
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line.length > 0) // 空行を削除
-      .join('\n');
-    lines.push(cleanMessage);
-    lines.push('');
-    lines.push('-'.repeat(50));
-    lines.push('');
+      .filter(line => line.length > 0); // 空行を削除
+    
+    // 最初の行が【イベントタイプ】¥価格 在庫数の形式なら削除
+    // （watch.jsでHighPriceInStockの場合は既に追加されていないが、念のため削除）
+    if (messageLines.length > 0 && messageLines[0].match(/^【.+】¥[\d,]+ 在庫\d+$/)) {
+      messageLines.shift(); // 最初の行を削除
+    }
+    
+    const cleanMessage = messageLines.join('\n');
+    if (cleanMessage) {
+      lines.push(cleanMessage);
+      lines.push(''); // 商品間は1行空行のみ
+    }
   }
 
-  // 最終的なメッセージから連続する空行を削除
+  // 最終的なメッセージから連続する空行を削除（最大2つの連続改行まで）
   const message = lines
     .join('\n')
     .replace(/\n{3,}/g, '\n\n') // 3つ以上の連続する改行を2つに
