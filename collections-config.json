@@ -1,11 +1,5 @@
 [
   {
-    "name": "MEGA",
-    "base": "https://www.hareruya2.com/collections/mega?filter.v.availability=1&sort_by=price-descending",
-    "pages": "all",
-    "priority": "normal"
-  },
-  {
     "name": "SV",
     "base": "https://www.hareruya2.com/collections/sv?filter.v.availability=1&sort_by=price-descending",
     "pages": "all",
@@ -14,13 +8,13 @@
   {
     "name": "SS",
     "base": "https://www.hareruya2.com/collections/ss?filter.v.availability=1&sort_by=price-descending",
-    "pages": "all",
+    "pages": "1-6",
     "priority": "normal"
   },
   {
     "name": "SM",
     "base": "https://www.hareruya2.com/collections/sm?filter.v.availability=1&sort_by=price-descending",
-    "pages": "all",
+    "pages": "1-13",
     "priority": "normal"
   },
   {

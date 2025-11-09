@@ -143,7 +143,7 @@ async function handleProduct(product, collectionName) {
       const message = msgParts.join('\n');
       await sendSlack(message);
       
-      // メール通知をキューに追加（バッチ送信用）
+      // メール通知処理
       if (config.emailEnabled) {
         // collectionNameが未指定の場合は、URLから推測を試みる
         let queueKey = collectionName;
@@ -158,17 +158,33 @@ async function handleProduct(product, collectionName) {
         }
         
         if (queueKey) {
-          if (!emailNotificationQueue.has(queueKey)) {
-            emailNotificationQueue.set(queueKey, []);
+          // NewHighPricePageの場合は即座にメールを送信
+          if (eventType === 'NewHighPricePage') {
+            console.log(`[watch] NewHighPricePageを即時メール送信: ${queueKey}`);
+            try {
+              await sendBatchEmail(queueKey, [{
+                eventType,
+                message,
+                product,
+                timestamp: new Date().toISOString(),
+              }]);
+            } catch (error) {
+              console.error(`[watch] 即時メール送信失敗: ${queueKey}`, error.message);
+            }
+          } else {
+            // その他のイベントはキューに追加（コレクション処理完了後にバッチ送信）
+            if (!emailNotificationQueue.has(queueKey)) {
+              emailNotificationQueue.set(queueKey, []);
+            }
+            emailNotificationQueue.get(queueKey).push({
+              eventType,
+              message,
+              product,
+              timestamp: new Date().toISOString(),
+            });
+            const queueSize = emailNotificationQueue.get(queueKey).length;
+            console.log(`[watch] メール通知をキューに追加: ${queueKey} (キューサイズ: ${queueSize})`);
           }
-          emailNotificationQueue.get(queueKey).push({
-            eventType,
-            message,
-            product,
-            timestamp: new Date().toISOString(),
-          });
-          const queueSize = emailNotificationQueue.get(queueKey).length;
-          console.log(`[watch] メール通知をキューに追加: ${queueKey} (キューサイズ: ${queueSize})`);
         } else {
           console.warn('[watch] メール通知キューに追加失敗: collectionNameが不明');
         }
@@ -264,6 +280,11 @@ async function mainLoop() {
   console.log('[watch] start');
   console.log(`[watch] 監視コレクション数: ${config.collections.length}`);
   
+  // コレクション一覧をログに出力（デバッグ用）
+  config.collections.forEach((col, index) => {
+    console.log(`[watch]   ${index + 1}. ${col.name} (優先度: ${col.priority}, ページ: ${Array.isArray(col.pages) ? col.pages.length + 'ページ' : col.pages})`);
+  });
+  
   // 動的ページ数検出
   const resolvedCollections = [];
   for (const col of config.collections) {
@@ -290,14 +311,10 @@ async function mainLoop() {
   // コレクションごとの最終実行時刻を管理
   const lastRunTimes = new Map();
   
-  // バッチメール送信の最終実行時刻を管理
-  let lastEmailBatchTime = Date.now();
-  
   while (true) {
     const now = Date.now();
     
     // 各コレクションを処理
-    let anyCollectionProcessed = false;
     for (const collection of resolvedCollections) {
       const collectionKey = collection.name;
       const lastRun = lastRunTimes.get(collectionKey) || 0;
@@ -315,24 +332,26 @@ async function mainLoop() {
             console.warn(`[watch] ${collection.name} page${page} エラー:`, e.message);
           }
         }
-        
+
         lastRunTimes.set(collectionKey, now);
         console.log(`[watch] 処理完了: ${collection.name}`);
-        anyCollectionProcessed = true;
-      }
-    }
-    
-    // コレクション処理後にバッチメール送信をチェック
-    // または一定間隔が経過した場合
-    if (config.emailEnabled && (
-      anyCollectionProcessed || 
-      (now - lastEmailBatchTime) >= (config.emailBatchIntervalSec * 1000)
-    )) {
-      const queueSize = Array.from(emailNotificationQueue.values()).reduce((sum, arr) => sum + arr.length, 0);
-      if (queueSize > 0) {
-        console.log(`[email] バッチメール送信タイミング: キューサイズ=${queueSize}`);
-        await processEmailBatch();
-        lastEmailBatchTime = now;
+        
+        // コレクション処理完了後に、そのコレクションのバッチメールを送信
+        if (config.emailEnabled) {
+          const collectionNotifications = emailNotificationQueue.get(collection.name);
+          if (collectionNotifications && collectionNotifications.length > 0) {
+            console.log(`[watch] ${collection.name} のバッチメール送信開始 (${collectionNotifications.length}件)`);
+            const batch = [...collectionNotifications];
+            emailNotificationQueue.set(collection.name, []); // キューをクリア
+            
+            try {
+              await sendBatchEmail(collection.name, batch);
+              console.log(`[watch] ${collection.name} のバッチメール送信完了`);
+            } catch (error) {
+              console.error(`[watch] ${collection.name} のバッチメール送信失敗:`, error.message);
+            }
+          }
+        }
       }
     }
     
