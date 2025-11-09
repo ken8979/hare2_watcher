@@ -1,0 +1,28 @@
+{
+  "name": "hare2",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/watch.js",
+    "dev": "node src/watch.js",
+    "oneshot": "node src/oneshot.js",
+    "test:config": "node tests/test-config.js",
+    "test:pages": "node tests/test-pages.js",
+    "test:simulate": "node tests/simulate.js",
+    "test:simulate-multi": "node tests/simulate-multi.js",
+    "test:email": "node tests/test-email.js",
+    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "dotenv": "^17.2.3",
+    "ioredis": "^5.8.2",
+    "nodemailer": "^7.0.10",
+    "undici": "^7.16.0"
+  }
+}
