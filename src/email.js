@@ -38,6 +38,7 @@ export async function sendEmail(subject, message) {
     }
     const info = await transport.sendMail(mailOptions);
     console.log('[email] メール送信成功:', info.messageId);
+    console.log('[email] 件名:', subject);
   } catch (error) {
     console.error('[email] メール送信失敗:', error.message);
     throw error;
@@ -50,7 +51,14 @@ export async function sendBatchEmail(collectionName, notifications) {
     return;
   }
 
-  const subject = `【${collectionName}】在庫・価格変動通知 (${notifications.length}件)`;
+  // NewHighPricePageの場合は特別な件名を生成
+  let subject;
+  if (notifications.length === 1 && notifications[0].eventType === 'NewHighPricePage') {
+    const hashNumber = notifications[0].product?.hashNumber || '';
+    subject = `#${hashNumber}在庫追加`;
+  } else {
+    subject = `【${collectionName}】在庫・価格変動通知 (${notifications.length}件)`;
+  }
   
   const lines = [
     `【${collectionName}】の在庫・価格変動通知`,
