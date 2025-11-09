@@ -19,7 +19,10 @@
     "test:first-detection-clear": "node tests/test-first-detection-clear.js",
     "test:normal-product-first-detection": "node tests/test-normal-product-first-detection.js",
     "test:stock-change-email": "node tests/test-stock-change-email.js",
-    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock, test:e2e-email, test:redis-state, test:first-detection, test:first-detection-clear, test:normal-product-first-detection, test:stock-change-email\" && exit 0"
+    "test:collections-config": "node tests/test-collections-config.js",
+    "test:multi-collections-fetch": "node tests/test-multi-collections-fetch.js",
+    "test:multi-collections-with-env": "node tests/test-multi-collections-with-env.js",
+    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock, test:e2e-email, test:redis-state, test:first-detection, test:first-detection-clear, test:normal-product-first-detection, test:stock-change-email, test:collections-config, test:multi-collections-fetch, test:multi-collections-with-env\" && exit 0"
   },
   "keywords": [],
   "author": "",
