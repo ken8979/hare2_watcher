@@ -23,7 +23,9 @@
     "test:multi-collections-fetch": "node tests/test-multi-collections-fetch.js",
     "test:multi-collections-with-env": "node tests/test-multi-collections-with-env.js",
     "test:newhighpricepage-immediate": "node tests/test-newhighpricepage-immediate.js",
-    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock, test:e2e-email, test:redis-state, test:first-detection, test:first-detection-clear, test:normal-product-first-detection, test:stock-change-email, test:collections-config, test:multi-collections-fetch, test:multi-collections-with-env, test:newhighpricepage-immediate\" && exit 0"
+    "test:email-queue-debug": "node tests/test-email-queue-debug.js",
+    "test:email-simple": "node tests/test-email-simple.js",
+    "test": "echo \"Run specific tests: npm run test:config, test:pages, test:simulate, test:simulate-multi, test:email, test:email-price-change, test:email-batch-mock, test:e2e-email, test:redis-state, test:first-detection, test:first-detection-clear, test:normal-product-first-detection, test:stock-change-email, test:collections-config, test:multi-collections-fetch, test:multi-collections-with-env, test:newhighpricepage-immediate, test:email-queue-debug\" && exit 0"
   },
   "keywords": [],
   "author": "",

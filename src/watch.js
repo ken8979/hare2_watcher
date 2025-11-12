@@ -145,10 +145,10 @@ async function handleProduct(product, collectionName) {
       
       // メール通知処理
       if (config.emailEnabled) {
-        // collectionNameが未指定の場合は、URLから推測を試みる
+        // collectionNameを優先的に使用（確実にコレクション名と一致させる）
         let queueKey = collectionName;
         if (!queueKey && product.url) {
-          // URLからコレクション名を推測（例: /collections/pmcg/ から pmcg）
+          // collectionNameが未指定の場合は、URLから推測を試みる
           const urlMatch = product.url.match(/\/collections\/([^\/]+)/);
           if (urlMatch) {
             queueKey = urlMatch[1].toUpperCase();
@@ -173,17 +173,19 @@ async function handleProduct(product, collectionName) {
             }
           } else {
             // その他のイベントはキューに追加（コレクション処理完了後にバッチ送信）
-            if (!emailNotificationQueue.has(queueKey)) {
-              emailNotificationQueue.set(queueKey, []);
+            // 必ずcollectionNameを使用（URLから推測した値は使わない）
+            const finalQueueKey = collectionName || queueKey;
+            if (!emailNotificationQueue.has(finalQueueKey)) {
+              emailNotificationQueue.set(finalQueueKey, []);
             }
-            emailNotificationQueue.get(queueKey).push({
+            emailNotificationQueue.get(finalQueueKey).push({
               eventType,
               message,
               product,
               timestamp: new Date().toISOString(),
             });
-            const queueSize = emailNotificationQueue.get(queueKey).length;
-            console.log(`[watch] メール通知をキューに追加: ${queueKey} (キューサイズ: ${queueSize})`);
+            const queueSize = emailNotificationQueue.get(finalQueueKey).length;
+            console.log(`[watch] メール通知をキューに追加: ${finalQueueKey} (キューサイズ: ${queueSize})`);
           }
         } else {
           console.warn('[watch] メール通知キューに追加失敗: collectionNameが不明');
@@ -218,14 +220,16 @@ async function processPage(collectionBase, page, isHotPage = false, collectionNa
   if (!changed && !isHotPage) {
     return; // page1以外で変化がない場合はスキップ
   }
-  
+
   // 一覧ページから取得した商品情報を処理
   console.log(`[watch] ${collectionName || 'unknown'} page${page}: ${products.length}件の商品を処理`);
-  
+
   for (const product of products) {
     try {
       if (isTargetProduct(product)) {
         await handleProduct(product, collectionName);
+        // 商品処理後に少し待機（CPU負荷軽減）
+        await sleep(50);
       }
     } catch (e) {
       console.warn('[product]', product.url, e.message);
@@ -328,6 +332,8 @@ async function mainLoop() {
           try {
             const isHot = isHotPage(page);
             await processPage(collection.base, page, isHot, collection.name);
+            // ページ処理後に少し待機（CPU負荷軽減）
+            await sleep(100);
           } catch (e) {
             console.warn(`[watch] ${collection.name} page${page} エラー:`, e.message);
           }
@@ -349,6 +355,14 @@ async function mainLoop() {
               console.log(`[watch] ${collection.name} のバッチメール送信完了`);
             } catch (error) {
               console.error(`[watch] ${collection.name} のバッチメール送信失敗:`, error.message);
+              // エラーが発生した場合、キューに戻す（次回再試行）
+              emailNotificationQueue.set(collection.name, batch);
+            }
+          } else {
+            // デバッグ用: キューに通知がない場合もログ出力
+            const allQueueKeys = Array.from(emailNotificationQueue.keys());
+            if (allQueueKeys.length > 0) {
+              console.log(`[watch] ${collection.name} のキューは空（他のキュー: ${allQueueKeys.join(', ')}）`);
             }
           }
         }
@@ -356,8 +370,9 @@ async function mainLoop() {
     }
     
     // 短い間隔でチェック（最小間隔の1/10）
+    // CPU負荷軽減のため、最低500msのスリープを追加
     const minInterval = Math.min(...config.collections.map(c => getIntervalForPriority(c.priority)));
-    await sleep(Math.max(1000, minInterval / 10));
+    await sleep(Math.max(500, minInterval / 10));
   }
 }
 
