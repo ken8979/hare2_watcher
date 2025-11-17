@@ -37,8 +37,10 @@ export async function sendEmail(subject, message) {
       throw new Error('メール送信設定が不完全です');
     }
     const info = await transport.sendMail(mailOptions);
-    console.log('[email] メール送信成功:', info.messageId);
+    console.log('[email] メール送信成功');
     console.log('[email] 件名:', subject);
+    console.log('[email] 送信先:', config.emailTo);
+    console.log('[email] メッセージID:', info.messageId);
   } catch (error) {
     console.error('[email] メール送信失敗:', error.message);
     throw error;

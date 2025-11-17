@@ -175,17 +175,21 @@ async function handleProduct(product, collectionName) {
             // その他のイベントはキューに追加（コレクション処理完了後にバッチ送信）
             // 必ずcollectionNameを使用（URLから推測した値は使わない）
             const finalQueueKey = collectionName || queueKey;
-            if (!emailNotificationQueue.has(finalQueueKey)) {
-              emailNotificationQueue.set(finalQueueKey, []);
+            if (!finalQueueKey) {
+              console.warn(`[watch] メール通知キューに追加失敗: collectionNameが不明 (eventType=${eventType}, identity=${identity})`);
+            } else {
+              if (!emailNotificationQueue.has(finalQueueKey)) {
+                emailNotificationQueue.set(finalQueueKey, []);
+              }
+              emailNotificationQueue.get(finalQueueKey).push({
+                eventType,
+                message,
+                product,
+                timestamp: new Date().toISOString(),
+              });
+              const queueSize = emailNotificationQueue.get(finalQueueKey).length;
+              console.log(`[watch] メール通知をキューに追加: ${finalQueueKey} (キューサイズ: ${queueSize}, eventType=${eventType})`);
             }
-            emailNotificationQueue.get(finalQueueKey).push({
-              eventType,
-              message,
-              product,
-              timestamp: new Date().toISOString(),
-            });
-            const queueSize = emailNotificationQueue.get(finalQueueKey).length;
-            console.log(`[watch] メール通知をキューに追加: ${finalQueueKey} (キューサイズ: ${queueSize})`);
           }
         } else {
           console.warn('[watch] メール通知キューに追加失敗: collectionNameが不明');
@@ -216,9 +220,12 @@ async function handleProduct(product, collectionName) {
 
 async function processPage(collectionBase, page, isHotPage = false, collectionName = null) {
   const { changed, products, url } = await fetchCollectionPage(collectionBase, page);
-  // バグ修正: page1は常に商品情報を処理（ハッシュ変化に関係なく）
+  // バグ修正: page1-3（ホットページ）は常に商品情報を処理（ハッシュ変化に関係なく）
+  // これにより、在庫変動を確実に検知できる
   if (!changed && !isHotPage) {
-    return; // page1以外で変化がない場合はスキップ
+    // page4以降で変化がない場合はスキップ（CPU負荷軽減）
+    // ただし、ホットページ（page1-3）は常に処理する
+    return;
   }
 
   // 一覧ページから取得した商品情報を処理
@@ -358,14 +365,18 @@ async function mainLoop() {
               console.log(`[watch] ${collection.name} のバッチメール送信完了`);
             } catch (error) {
               console.error(`[watch] ${collection.name} のバッチメール送信失敗:`, error.message);
+              console.error(`[watch] エラー詳細:`, error);
               // エラーが発生した場合、キューに戻す（次回再試行）
               emailNotificationQueue.set(collection.name, batch);
             }
           } else {
-            // デバッグ用: キューに通知がない場合もログ出力
+            // デバッグ用: キューに通知がない場合もログ出力（デバッグモード時のみ）
             const allQueueKeys = Array.from(emailNotificationQueue.keys());
             if (allQueueKeys.length > 0) {
               console.log(`[watch] ${collection.name} のキューは空（他のキュー: ${allQueueKeys.join(', ')}）`);
+            } else {
+              // キューが完全に空の場合もログ出力（デバッグ用）
+              console.log(`[watch] ${collection.name} のキューは空（通知なし）`);
             }
           }
         }
