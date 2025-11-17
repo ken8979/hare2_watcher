@@ -35,6 +35,11 @@ export async function fetchCollectionPage(collectionBase, page) {
   // 後方互換性: collectionBaseが未指定の場合は既存の設定を使用
   const base = collectionBase || config.targetCollectionBase;
   const url = buildCollectionUrl(base, page);
+  
+  // レート制限: リクエスト前に少し待機（CPU負荷軽減）
+  const jitter = Math.floor(Math.random() * (config.jitterMsMax - config.jitterMsMin + 1)) + config.jitterMsMin;
+  await new Promise(resolve => setTimeout(resolve, jitter));
+  
   const res = await fetch(url, { headers: { 'User-Agent': 'hareruya2bot/1.0' }});
   if (!res.ok) throw new Error(`collection ${page} fetch failed ${res.status}`);
   const html = await res.text();

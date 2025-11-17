@@ -228,8 +228,8 @@ async function processPage(collectionBase, page, isHotPage = false, collectionNa
     try {
       if (isTargetProduct(product)) {
         await handleProduct(product, collectionName);
-        // 商品処理後に少し待機（CPU負荷軽減）
-        await sleep(50);
+        // 商品処理後に待機（CPU負荷軽減）
+        await sleep(config.sleepBetweenProductsMs);
       }
     } catch (e) {
       console.warn('[product]', product.url, e.message);
@@ -332,8 +332,8 @@ async function mainLoop() {
           try {
             const isHot = isHotPage(page);
             await processPage(collection.base, page, isHot, collection.name);
-            // ページ処理後に少し待機（CPU負荷軽減）
-            await sleep(100);
+            // ページ処理後に待機（CPU負荷軽減）
+            await sleep(config.sleepBetweenPagesMs);
           } catch (e) {
             console.warn(`[watch] ${collection.name} page${page} エラー:`, e.message);
           }
@@ -341,6 +341,9 @@ async function mainLoop() {
 
         lastRunTimes.set(collectionKey, now);
         console.log(`[watch] 処理完了: ${collection.name}`);
+        
+        // コレクション処理完了後に待機（CPU負荷軽減）
+        await sleep(config.sleepBetweenCollectionsMs);
         
         // コレクション処理完了後に、そのコレクションのバッチメールを送信
         if (config.emailEnabled) {
@@ -369,10 +372,9 @@ async function mainLoop() {
       }
     }
     
-    // 短い間隔でチェック（最小間隔の1/10）
-    // CPU負荷軽減のため、最低500msのスリープを追加
-    const minInterval = Math.min(...config.collections.map(c => getIntervalForPriority(c.priority)));
-    await sleep(Math.max(500, minInterval / 10));
+    // メインループのスリープ（CPU負荷軽減）
+    // コレクション処理が完了した後、次のチェックまで待機
+    await sleep(config.mainLoopSleepMs);
   }
 }
 

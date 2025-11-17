@@ -98,6 +98,11 @@ export const config = {
   jitterMsMax: num('JITTER_MS_MAX', 1200),
   dedupeCooldownSec: num('DEDUPE_COOLDOWN_SEC', 180),
   notifyTtlSec: num('NOTIFY_TTL_SEC', 900),
+  // CPU負荷軽減設定
+  sleepBetweenPagesMs: num('SLEEP_BETWEEN_PAGES_MS', 500), // ページ処理間のスリープ（ミリ秒）
+  sleepBetweenProductsMs: num('SLEEP_BETWEEN_PRODUCTS_MS', 200), // 商品処理間のスリープ（ミリ秒）
+  sleepBetweenCollectionsMs: num('SLEEP_BETWEEN_COLLECTIONS_MS', 1000), // コレクション処理間のスリープ（ミリ秒）
+  mainLoopSleepMs: num('MAIN_LOOP_SLEEP_MS', 2000), // メインループのスリープ（ミリ秒）
   // メール通知設定
   emailEnabled: str('EMAIL_ENABLED', 'false') === 'true',
   emailSmtpHost: str('EMAIL_SMTP_HOST', 'smtp.gmail.com'),

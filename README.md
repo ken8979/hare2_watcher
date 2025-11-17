@@ -20,6 +20,13 @@ JITTER_MS_MIN=200
 JITTER_MS_MAX=1200
 DEDUPE_COOLDOWN_SEC=180
 
+# CPU負荷軽減設定（オプション）
+# ロードアベレージが高い場合は、これらの値を増やしてください
+SLEEP_BETWEEN_PAGES_MS=500        # ページ処理間のスリープ（ミリ秒、デフォルト: 500）
+SLEEP_BETWEEN_PRODUCTS_MS=200     # 商品処理間のスリープ（ミリ秒、デフォルト: 200）
+SLEEP_BETWEEN_COLLECTIONS_MS=1000 # コレクション処理間のスリープ（ミリ秒、デフォルト: 1000）
+MAIN_LOOP_SLEEP_MS=2000           # メインループのスリープ（ミリ秒、デフォルト: 2000）
+
 # メール通知設定（オプション）
 EMAIL_ENABLED=false
 EMAIL_SMTP_HOST=smtp.gmail.com
