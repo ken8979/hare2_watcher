@@ -19,14 +19,14 @@ function getTransporter() {
 }
 
 export async function sendEmail(subject, message) {
-  if (!config.emailEnabled || !config.emailTo) {
+  if (!config.emailEnabled || !config.emailTo || config.emailTo.length === 0) {
     console.log('[email] メール通知は無効化されています');
     return;
   }
 
   const mailOptions = {
     from: config.emailFrom || config.emailSmtpUser,
-    to: config.emailTo,
+    to: config.emailTo, // 配列または文字列（nodemailerは両方受け付ける）
     subject: subject,
     text: message,
   };
@@ -39,7 +39,7 @@ export async function sendEmail(subject, message) {
     const info = await transport.sendMail(mailOptions);
     console.log('[email] メール送信成功');
     console.log('[email] 件名:', subject);
-    console.log('[email] 送信先:', config.emailTo);
+    console.log('[email] 送信先:', Array.isArray(config.emailTo) ? config.emailTo.join(', ') : config.emailTo);
     console.log('[email] メッセージID:', info.messageId);
   } catch (error) {
     console.error('[email] メール送信失敗:', error.message);
@@ -49,7 +49,7 @@ export async function sendEmail(subject, message) {
 
 // バッチメール送信（複数の通知をまとめて送信）
 export async function sendBatchEmail(collectionName, notifications) {
-  if (!config.emailEnabled || !config.emailTo || !notifications || notifications.length === 0) {
+  if (!config.emailEnabled || !config.emailTo || config.emailTo.length === 0 || !notifications || notifications.length === 0) {
     return;
   }
 

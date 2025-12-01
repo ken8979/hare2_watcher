@@ -45,3 +45,5 @@ node scripts/generate-collections-env.js | pbcopy
   - `"normal"`: 中頻度（WARM_INTERVAL_SEC間隔、デフォルト60秒）
   - `"cold"`: 低頻度（COLD_INTERVAL_SEC間隔、デフォルト60秒）
 
+
+

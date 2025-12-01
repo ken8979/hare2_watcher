@@ -35,7 +35,8 @@ EMAIL_SMTP_SECURE=false
 EMAIL_SMTP_USER=your-email@gmail.com
 EMAIL_SMTP_PASSWORD=your-app-password
 EMAIL_FROM=your-email@gmail.com
-EMAIL_TO=recipient@example.com
+EMAIL_TO=recipient@example.com                    # 単一のメールアドレス
+# EMAIL_TO=recipient1@example.com,recipient2@example.com  # 複数のメールアドレス（カンマ区切り）
 
 # 在庫減少・売り切れ通知設定（オプション）
 NOTIFY_STOCK_DECREASE=false
@@ -167,6 +168,7 @@ npm run start
 - `EMAIL_ENABLED=true`でメール通知を有効化
 - Gmail、SendGridなどのSMTPサーバーに対応
 - Slack通知と同じ内容をメールでも送信
+- `EMAIL_TO`にカンマ区切りで複数のメールアドレスを指定可能（例: `EMAIL_TO=user1@example.com,user2@example.com`）
 
 ## バグ修正
 - ✅ 在庫が増加していない商品も増加したと検知してしまう → delta >= 1を明示的にチェック

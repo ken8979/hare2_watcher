@@ -14,6 +14,12 @@ function str(name, def) {
   return v === undefined || v === '' ? def : v;
 }
 
+// メールアドレスをカンマ区切りで分割して配列に変換
+function parseEmailAddresses(emailStr) {
+  if (!emailStr) return [];
+  return emailStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+}
+
 // ページ範囲を生成（1からmaxPageまで）
 function generatePageRange(maxPage, hotPages = 3) {
   const pages = [];
@@ -111,7 +117,7 @@ export const config = {
   emailSmtpUser: str('EMAIL_SMTP_USER', ''),
   emailSmtpPassword: str('EMAIL_SMTP_PASSWORD', ''),
   emailFrom: str('EMAIL_FROM', ''),
-  emailTo: str('EMAIL_TO', ''),
+  emailTo: parseEmailAddresses(str('EMAIL_TO', '')), // カンマ区切りで複数のメールアドレスを指定可能
   // 在庫減少・売り切れ通知設定
   notifyStockDecrease: str('NOTIFY_STOCK_DECREASE', 'false') === 'true',
   notifySoldOut: str('NOTIFY_SOLD_OUT', 'false') === 'true',
